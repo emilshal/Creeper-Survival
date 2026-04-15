@@ -1,0 +1,17 @@
+{
+  "ClassName": "Folder",
+  "Children": [
+    {
+      "Name": "QueueAction",
+      "ClassName": "RemoteEvent"
+    },
+    {
+      "Name": "QueueState",
+      "ClassName": "RemoteEvent"
+    },
+    {
+      "Name": "ReturnToLobby",
+      "ClassName": "RemoteEvent"
+    }
+  ]
+}
