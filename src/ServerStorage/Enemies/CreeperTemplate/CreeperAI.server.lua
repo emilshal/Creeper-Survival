@@ -16,10 +16,14 @@ local exploding = false
 local currentWaypointIndex = 0
 local currentWaypoints = {}
 local moveConnection
+local arenaZone = creeper:GetAttribute("ArenaZone")
 
 local function getTarget()
     local bestCharacter, bestDistance
     for _, player in ipairs(Players:GetPlayers()) do
+        if arenaZone and (player:GetAttribute("CurrentZone") or "Lobby") ~= arenaZone then
+            continue
+        end
         local character = player.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
         local targetHumanoid = character and character:FindFirstChildOfClass("Humanoid")

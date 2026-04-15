@@ -266,17 +266,21 @@ for _, arenaId in ipairs(queueOrder) do
     createCard(arenaId)
 end
 
-local arenaStatus = Instance.new("TextLabel")
-arenaStatus.BackgroundTransparency = 1
-arenaStatus.AnchorPoint = Vector2.new(0.5, 0)
-arenaStatus.Position = UDim2.fromScale(0.5, 0.17)
-arenaStatus.Size = UDim2.fromOffset(400, 28)
-arenaStatus.Font = Enum.Font.GothamBold
-arenaStatus.Text = ""
-arenaStatus.TextColor3 = Color3.fromRGB(226, 233, 244)
-arenaStatus.TextSize = 18
-arenaStatus.Visible = false
-arenaStatus.Parent = gui
+local waveStatus = Instance.new("TextLabel")
+waveStatus.Name = "WaveStatus"
+waveStatus.AnchorPoint = Vector2.new(0.5, 0)
+waveStatus.Position = UDim2.fromScale(0.5, 0.06)
+waveStatus.Size = UDim2.fromOffset(260, 42)
+waveStatus.BackgroundColor3 = Color3.fromRGB(16, 20, 29)
+waveStatus.BackgroundTransparency = 0.18
+waveStatus.Font = Enum.Font.GothamBlack
+waveStatus.Text = ""
+waveStatus.TextColor3 = Color3.fromRGB(245, 247, 250)
+waveStatus.TextSize = 28
+waveStatus.Visible = false
+waveStatus.Parent = gui
+corner(waveStatus, 18)
+stroke(waveStatus, Color3.fromRGB(89, 101, 127), 1, 0.3)
 
 local lastSnapshot = {
     queues = {},
@@ -320,8 +324,9 @@ updateUi = function(snapshot)
     playSubtext.Visible = inLobby and not queuePanelOpen
     closeButton.Visible = inLobby and queuePanelOpen
     returnButton.Visible = not inLobby
-    arenaStatus.Visible = not inLobby
-    arenaStatus.Text = not inLobby and ("Currently in " .. zone) or ""
+    local currentWave = player:GetAttribute("CurrentWave")
+    waveStatus.Visible = not inLobby and type(currentWave) == "number" and currentWave > 0
+    waveStatus.Text = waveStatus.Visible and string.format("Wave %d", currentWave) or ""
 
     for arenaId, card in pairs(cards) do
         local data = lastSnapshot.queues and lastSnapshot.queues[arenaId]
@@ -368,6 +373,10 @@ end)
 
 player:GetAttributeChangedSignal("QueuedArena"):Connect(function()
     lastSnapshot.yourQueue = player:GetAttribute("QueuedArena")
+    updateUi(lastSnapshot)
+end)
+
+player:GetAttributeChangedSignal("CurrentWave"):Connect(function()
     updateUi(lastSnapshot)
 end)
 

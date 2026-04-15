@@ -1,5 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+local Workspace = game:GetService("Workspace")
 
 local remotes = ReplicatedStorage:WaitForChild("QueueRemotes")
 local queueActionRemote = remotes:WaitForChild("QueueAction")
@@ -9,6 +11,13 @@ local returnToLobbyRemote = remotes:WaitForChild("ReturnToLobby")
 local LOBBY_CFRAME = CFrame.new(0, 24, 520)
 local QUEUE_COUNTDOWN = 8
 local MATCH_SPREAD = 10
+local WAVE_ONE_CREEPER_COUNT = 2
+local WAVE_ONE_SPAWN_DELAY = 1.5
+
+local creeperTemplate = ServerStorage:WaitForChild("Enemies"):WaitForChild("CreeperTemplate")
+local enemyFolder = Workspace:FindFirstChild("Enemies") or Instance.new("Folder")
+enemyFolder.Name = "Enemies"
+enemyFolder.Parent = Workspace
 
 local arenas = {
     mountain = {
@@ -18,6 +27,7 @@ local arenas = {
         minPlayers = 1,
         maxPlayers = 6,
         destination = CFrame.new(0, 9, 0),
+        modelName = "MountainArena",
         accent = Color3.fromRGB(82, 187, 255),
     },
     canyon = {
@@ -27,6 +37,7 @@ local arenas = {
         minPlayers = 1,
         maxPlayers = 6,
         destination = CFrame.new(520, 9, 0),
+        modelName = "ArenaBetaShell",
         accent = Color3.fromRGB(255, 198, 84),
     },
 }
@@ -58,6 +69,69 @@ local function compactPlayers(list)
         end
     end
     return kept
+end
+
+local function getArenaBounds(arena)
+    local model = arena.modelName and Workspace:FindFirstChild(arena.modelName)
+    if model and model:IsA("Model") then
+        local cf, size = model:GetBoundingBox()
+        return cf.Position, size
+    end
+    return arena.destination.Position, Vector3.new(120, 20, 120)
+end
+
+local function findGroundPosition(position)
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+    rayParams.FilterDescendantsInstances = {enemyFolder}
+
+    local origin = position + Vector3.new(0, 80, 0)
+    local result = Workspace:Raycast(origin, Vector3.new(0, -220, 0), rayParams)
+    if result then
+        return result.Position + Vector3.new(0, 3.5, 0)
+    end
+    return position
+end
+
+local function getWaveOneSpawnPoints(arena)
+    local center, size = getArenaBounds(arena)
+    local edgeOffsetX = math.max(18, size.X * 0.5 - 14)
+    local first = Vector3.new(center.X - edgeOffsetX, arena.destination.Position.Y, center.Z)
+    local second = Vector3.new(center.X + edgeOffsetX, arena.destination.Position.Y, center.Z)
+    return {
+        findGroundPosition(first),
+        findGroundPosition(second),
+    }
+end
+
+local function clearArenaEnemies(arenaId)
+    for _, enemy in ipairs(enemyFolder:GetChildren()) do
+        if enemy:GetAttribute("ArenaId") == arenaId then
+            enemy:Destroy()
+        end
+    end
+end
+
+local function spawnWaveOne(arenaId)
+    local queue = queues[arenaId]
+    if not queue then
+        return
+    end
+
+    clearArenaEnemies(arenaId)
+
+    local spawnPoints = getWaveOneSpawnPoints(queue.arena)
+    for index = 1, math.min(WAVE_ONE_CREEPER_COUNT, #spawnPoints) do
+        local spawnPosition = spawnPoints[index]
+        local enemy = creeperTemplate:Clone()
+        enemy.Name = string.format("%sWave1Creeper%d", queue.arena.id, index)
+        enemy:SetAttribute("ArenaId", arenaId)
+        enemy:SetAttribute("ArenaZone", queue.arena.name)
+        enemy.Parent = enemyFolder
+
+        local center = queue.arena.destination.Position
+        enemy:PivotTo(CFrame.lookAt(spawnPosition, Vector3.new(center.X, spawnPosition.Y, center.Z)))
+    end
 end
 
 local function removePlayerFromQueue(player, skipBroadcast)
@@ -137,12 +211,17 @@ local function launchMatch(arenaId)
     for index, player in ipairs(playersToSend) do
         player:SetAttribute("QueuedArena", nil)
         player:SetAttribute("CurrentZone", queue.arena.name)
+        player:SetAttribute("CurrentWave", 1)
         local offsetX = ((index - 1) % 3 - 1) * MATCH_SPREAD
         local offsetZ = math.floor((index - 1) / 3) * MATCH_SPREAD
         pivotCharacter(player, queue.arena.destination * CFrame.new(offsetX, 0, offsetZ))
     end
 
     broadcastState()
+
+    task.delay(WAVE_ONE_SPAWN_DELAY, function()
+        spawnWaveOne(arenaId)
+    end)
 end
 
 local function startCountdown(arenaId)
@@ -223,6 +302,7 @@ end)
 returnToLobbyRemote.OnServerEvent:Connect(function(player)
     leaveQueue(player)
     player:SetAttribute("CurrentZone", "Lobby")
+    player:SetAttribute("CurrentWave", nil)
     pivotCharacter(player, LOBBY_CFRAME)
     broadcastState()
 end)
@@ -230,6 +310,7 @@ end)
 Players.PlayerAdded:Connect(function(player)
     player:SetAttribute("CurrentZone", "Lobby")
     player:SetAttribute("QueuedArena", nil)
+    player:SetAttribute("CurrentWave", nil)
 
     player.CharacterAdded:Connect(function()
         task.defer(function()
