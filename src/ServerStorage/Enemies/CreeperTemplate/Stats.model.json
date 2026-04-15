@@ -1,0 +1,40 @@
+{
+  "ClassName": "Configuration",
+  "Children": [
+    {
+      "Name": "Damage",
+      "ClassName": "NumberValue",
+      "Properties": {
+        "Value": 65
+      }
+    },
+    {
+      "Name": "BlastRadius",
+      "ClassName": "NumberValue",
+      "Properties": {
+        "Value": 10
+      }
+    },
+    {
+      "Name": "FuseTime",
+      "ClassName": "NumberValue",
+      "Properties": {
+        "Value": 1.15
+      }
+    },
+    {
+      "Name": "TriggerDistance",
+      "ClassName": "NumberValue",
+      "Properties": {
+        "Value": 7
+      }
+    },
+    {
+      "Name": "Reward",
+      "ClassName": "NumberValue",
+      "Properties": {
+        "Value": 10
+      }
+    }
+  ]
+}

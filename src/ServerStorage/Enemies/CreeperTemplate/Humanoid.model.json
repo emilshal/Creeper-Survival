@@ -1,0 +1,10 @@
+{
+  "ClassName": "Humanoid",
+  "Properties": {
+    "WalkSpeed": 11,
+    "MaxHealth": 100,
+    "Health": 100,
+    "HipHeight": 0,
+    "AutoRotate": true
+  }
+}
